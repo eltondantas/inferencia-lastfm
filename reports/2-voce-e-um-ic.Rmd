@@ -41,15 +41,43 @@ Utilizaremos ICs para estimar duas métricas sobre os usuários do LastFM em ger
 
 #1. Qual a proporção de novos artistas escutados pelos usuários
 
+#Aplicando o bootstraping
+
 ```{r}
-theta = lastfm %>%  
-  mutate(prop_news = news/(news + old)) %>%
+theta_f = function(df) {
+  df %>%
+    mutate(prop_news = news/(news + old)) %>%
     summarise(mean_prop_news = mean(prop_news)) %>%
     pull(mean_prop_news)
+}
 
-# theta_c: proporções de artistas velhos e novos da amostra
+theta = theta_f(lastfm)
 
-theta
+set.seed(1212)
+amostra = lastfm %>%  
+  sample_n(200) 
+
+theta_c = theta_f(amostra)
+```
+
+```{r}
+repeticoes = 5000 # pelo menos 2000, mas mais não faz mal.
+
+um_bootstrap <- function(x){
+  news = x %>% pull(news)
+  boot_x <- sample(news,           # amostre dos dados
+                   size = NROW(x), # tamanho igual ao recebido
+                   replace = TRUE) # aqui é o bootstrap
+  return(mean(boot_x))
+}
+
+set.seed(1212)
+
+# A REAMOSTRAGEM
+reamostragens = tibble(i = 1:repeticoes) %>% 
+  mutate(theta_c_s = map_dbl(i, ~ um_bootstrap(amostra)))
+
+reamostragens
 ```
 
 2. Para os usuários que gostam de música muito pop (mediana_pop > 5), qual a correlação entre a popularidade mediana dos artistas escutado e a proporção dos artistas escutados que eram novos.
